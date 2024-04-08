@@ -556,6 +556,7 @@ impl<'a> OwnedCodeGen<'a> {
     pub fn tokens(&self) -> proc_macro2::TokenStream {
         let clone = self.impls.clone.to_owned_impl(self);
         let display = self.impls.display.to_owned_impl(self);
+        let secret = self.impls.secret.to_owned_impl(self);
         let debug = self.impls.debug.to_owned_impl(self);
         let ord = self.impls.ord.to_owned_impl(self);
         let serde = self.impls.serde.to_owned_impl(self);
@@ -577,6 +578,7 @@ impl<'a> OwnedCodeGen<'a> {
             #conversion
             #debug
             #display
+            #secret
             #ord
             #serde
         }

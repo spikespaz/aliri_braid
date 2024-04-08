@@ -539,6 +539,7 @@ impl<'a> RefCodeGen<'a> {
         let conversion = self.conversion();
         let debug = self.impls.debug.to_borrowed_impl(self);
         let display = self.impls.display.to_borrowed_impl(self);
+        let secret = self.impls.secret.to_borrowed_impl(self);
         let ord = self.impls.ord.to_borrowed_impl(self);
         let serde = self.impls.serde.to_borrowed_impl(self);
 
@@ -581,6 +582,7 @@ impl<'a> RefCodeGen<'a> {
             #conversion
             #debug
             #display
+            #secret
             #serde
         }
     }

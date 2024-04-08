@@ -10,6 +10,7 @@ pub struct Symbol(&'static str);
 pub const CLONE: Symbol = Symbol("clone");
 pub const DEBUG: Symbol = Symbol("debug");
 pub const DISPLAY: Symbol = Symbol("display");
+pub const SECRET: Symbol = Symbol("secret");
 pub const ORD: Symbol = Symbol("ord");
 pub const SERDE: Symbol = Symbol("serde");
 pub const REF: Symbol = Symbol("ref_name");

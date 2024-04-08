@@ -179,6 +179,15 @@ impl fmt::Display for SecretRef {
     }
 }
 
+#[braid(secret)]
+pub struct SimpleSecret;
+
+#[braid(secret = "impl")]
+pub struct SimpleSecretExplicitImpl;
+
+#[braid(secret = "omit")]
+pub struct SimpleSecretExplicitOmit;
+
 mod tests {
     use super::*;
 

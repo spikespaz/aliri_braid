@@ -129,6 +129,20 @@ impl syn::parse::Parse for Params {
                             .map_err(|e| syn::Error::new_spanned(&arg, e.to_owned()))?
                             .into();
                 }
+                syn::Meta::Path(p) if p == symbol::SECRET => {
+                    params.impls.secret = DelegatingImplOption::Implement.into();
+                    params.impls.debug = DelegatingImplOption::Omit.into();
+                    params.impls.display = DelegatingImplOption::Omit.into();
+                }
+                syn::Meta::NameValue(nv) if nv.path == symbol::SECRET => {
+                    params.impls.secret =
+                        parse_lit_into_string(symbol::SECRET, parse_expr_as_lit(&nv.value)?)?
+                            .parse::<DelegatingImplOption>()
+                            .map_err(|e| syn::Error::new_spanned(&arg, e.to_owned()))?
+                            .into();
+                    params.impls.debug = DelegatingImplOption::Omit.into();
+                    params.impls.display = DelegatingImplOption::Omit.into();
+                }
                 syn::Meta::NameValue(nv) if nv.path == symbol::ORD => {
                     params.impls.ord =
                         parse_lit_into_string(symbol::ORD, parse_expr_as_lit(&nv.value)?)?
@@ -282,6 +296,21 @@ impl syn::parse::Parse for ParamsRef {
                             .map_err(|e| syn::Error::new_spanned(nv, e.to_owned()))
                             .map(DelegatingImplOption::from)?
                             .into();
+                }
+                syn::Meta::Path(p) if p == symbol::SECRET => {
+                    params.impls.secret = DelegatingImplOption::Implement.into();
+                    params.impls.debug = DelegatingImplOption::Omit.into();
+                    params.impls.display = DelegatingImplOption::Omit.into();
+                }
+                syn::Meta::NameValue(nv) if nv.path == symbol::SECRET => {
+                    params.impls.secret =
+                        parse_lit_into_string(symbol::SECRET, parse_expr_as_lit(&nv.value)?)?
+                            .parse::<ImplOption>()
+                            .map_err(|e| syn::Error::new_spanned(nv, e.to_owned()))
+                            .map(DelegatingImplOption::from)?
+                            .into();
+                    params.impls.debug = DelegatingImplOption::Omit.into();
+                    params.impls.display = DelegatingImplOption::Omit.into();
                 }
                 syn::Meta::NameValue(nv) if nv.path == symbol::ORD => {
                     params.impls.ord =

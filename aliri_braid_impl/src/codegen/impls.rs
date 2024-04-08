@@ -1,3 +1,4 @@
+use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use super::{check_mode::CheckMode, OwnedCodeGen, RefCodeGen};
@@ -87,6 +88,7 @@ impl From<ImplOption> for DelegatingImplOption {
 pub struct Impls {
     pub clone: ImplClone,
     pub debug: ImplDebug,
+    pub secret: ImplSecret,
     pub display: ImplDisplay,
     pub ord: ImplOrd,
     pub serde: ImplSerde,
@@ -221,6 +223,63 @@ impl ToImpl for ImplDebug {
                 }
             }
         })
+    }
+}
+
+#[derive(Debug)]
+pub struct ImplSecret(DelegatingImplOption);
+
+impl Default for ImplSecret {
+    fn default() -> Self {
+        Self(DelegatingImplOption::Omit)
+    }
+}
+
+impl From<DelegatingImplOption> for ImplSecret {
+    fn from(opt: DelegatingImplOption) -> Self {
+        Self(opt)
+    }
+}
+
+#[rustfmt::skip]
+macro_rules! impl_secret {
+    ($ty:ident, $core:ident, $msg:expr) => {
+        || {
+            let msg = $msg;
+            let mut tokens = proc_macro2::TokenStream::new();
+            tokens.extend(impl_secret!(Debug, $ty, $core, msg));
+            tokens.extend(impl_secret!(Display, $ty, $core, msg));
+            tokens
+        }
+    };
+    ($trait:ident, $ty:ident, $core:ident, $msg:ident) => {
+        quote! {
+            #[automatically_derived]
+            impl ::#$core::fmt::$trait for #$ty {
+                #[inline]
+                fn fmt(&self, f: &mut ::#$core::fmt::Formatter) -> ::#$core::fmt::Result {
+                    f.write_str(#$msg)
+                }
+            }
+        }
+    };
+}
+
+impl ToImpl for ImplSecret {
+    fn to_owned_impl(&self, gen: &OwnedCodeGen) -> Option<proc_macro2::TokenStream> {
+        let ty = gen.ty;
+        let core = gen.std_lib.core();
+        let msg = format!("[redacted {ty}]");
+
+        self.0.map_owned(impl_secret!(ty, core, &msg))
+    }
+
+    fn to_borrowed_impl(&self, gen: &RefCodeGen) -> Option<proc_macro2::TokenStream> {
+        let ident = &gen.ident;
+        let core = gen.std_lib.core();
+        let msg = format!("[redacted {ident}]");
+
+        self.0.map_ref(impl_secret!(ident, core, &msg))
     }
 }
 
