@@ -243,43 +243,84 @@ impl From<DelegatingImplOption> for ImplSecret {
 
 #[rustfmt::skip]
 macro_rules! impl_secret {
-    ($ty:ident, $core:ident, $msg:expr) => {
-        || {
-            let msg = $msg;
-            let mut tokens = proc_macro2::TokenStream::new();
-            tokens.extend(impl_secret!(Debug, $ty, $core, msg));
-            tokens.extend(impl_secret!(Display, $ty, $core, msg));
-            tokens
-        }
+    (@owned, $ty:ident, $ref_ty:ident, $field:ident, $core:ident, $msg:expr) => {{
+        let mut tokens = proc_macro2::TokenStream::new();
+        tokens.extend(impl_secret!(
+            @impl, Display, $ty, $core, $msg,
+            quote!(<#$ref_ty as ::#$core::fmt::Display>::fmt(::#$core::ops::Deref::deref(self), f))
+        ));
+        tokens.extend(impl_secret!(@impl, Debug, $ty, $field, $core, $msg));
+        tokens
+    }};
+    (@borrowed, $ty:ident, $field:ident, $core:ident, $msg:expr) => {{
+        let mut tokens = proc_macro2::TokenStream::new();
+        tokens.extend(impl_secret!(
+            @impl, Display, $ty, $core, $msg,
+            quote!(<str as ::#$core::fmt::Display>::fmt(&self.#$field, f)),
+        ));
+        tokens.extend(impl_secret!(@impl, Debug, $ty, $field, $core, $msg));
+        tokens
+    }};
+    (@impl, Debug, $ty:ident, $field:ident, $core:ident, $msg:expr) => {
+        impl_secret!(
+            @impl, Debug, $ty, $core, $msg,
+            quote! {
+                f.write_str("\"")?;
+                let max_len = f.width().unwrap_or(10);
+                if max_len <= 1 {
+                    f.write_str("…")?;
+                } else {
+                    match self.#$field.char_indices().nth(max_len - 2) {
+                        Some((idx, c)) if idx + c.len_utf8() < self.#$field.len() => {
+                            f.write_str(&self.#$field[0..idx + c.len_utf8()])?;
+                            f.write_str("…")?;
+                        }
+                        _ => {
+                            f.write_str(&self.#$field)?;
+                        }
+                    }
+                }
+                f.write_str("\"")
+            },
+        )
     };
-    ($trait:ident, $ty:ident, $core:ident, $msg:ident) => {
+    (@impl, $trait:ident, $ty:ident, $core:ident, $msg:expr, $alternate:expr $(,)?) => {{
+        let msg = $msg;
+        let alternate = $alternate;
         quote! {
             #[automatically_derived]
             impl ::#$core::fmt::$trait for #$ty {
                 #[inline]
                 fn fmt(&self, f: &mut ::#$core::fmt::Formatter) -> ::#$core::fmt::Result {
-                    f.write_str(#$msg)
+                    if f.alternate() {
+                        #alternate
+                    } else {
+                        f.write_str(#msg)
+                    }
                 }
             }
         }
-    };
+    }};
 }
 
 impl ToImpl for ImplSecret {
     fn to_owned_impl(&self, gen: &OwnedCodeGen) -> Option<proc_macro2::TokenStream> {
         let ty = gen.ty;
+        let field_name = &gen.field.name;
+        let ref_ty = gen.ref_ty;
         let core = gen.std_lib.core();
         let msg = format!("[redacted {ty}]");
-
-        self.0.map_owned(impl_secret!(ty, core, &msg))
+        self.0
+            .map_owned(|| impl_secret!(@owned, ty, ref_ty, field_name, core, &msg))
     }
 
     fn to_borrowed_impl(&self, gen: &RefCodeGen) -> Option<proc_macro2::TokenStream> {
         let ident = &gen.ident;
+        let field_name = &gen.field.name;
         let core = gen.std_lib.core();
         let msg = format!("[redacted {ident}]");
-
-        self.0.map_ref(impl_secret!(ident, core, &msg))
+        self.0
+            .map_ref(|| impl_secret!(@borrowed, ident, field_name, core, &msg))
     }
 }
 

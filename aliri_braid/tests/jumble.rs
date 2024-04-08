@@ -266,4 +266,38 @@ mod tests {
         assert_eq!("***SECRET***", format!("{}", vref));
         assert_eq!("my secret is bananas", format!("{:#}", vref));
     }
+
+    #[test]
+    fn check_simple_secret_debug() {
+        let v = SimpleSecret::from_static("my secret is bananas");
+        let vref: &SimpleSecretRef = &v;
+
+        assert_eq!("[redacted SimpleSecret]", format!("{:?}", v));
+        assert_eq!("my secret is bananas", format!("{:#}", v));
+        assert_eq!("\"my secret…\"", format!("{:#?}", v));
+        assert_eq!("\"…\"", format!("{:#1?}", v));
+        assert_eq!("\"my secret is…\"", format!("{:#13?}", v));
+        assert_eq!("\"my secret is banana…\"", format!("{:#20?}", v));
+        assert_eq!("\"my secret is bananas\"", format!("{:#21?}", v));
+
+        assert_eq!("[redacted SimpleSecretRef]", format!("{:?}", vref));
+        assert_eq!("my secret is bananas", format!("{:#}", vref));
+        assert_eq!("\"my secret…\"", format!("{:#?}", vref));
+        assert_eq!("\"…\"", format!("{:#1?}", vref));
+        assert_eq!("\"my secret is…\"", format!("{:#13?}", vref));
+        assert_eq!("\"my secret is banana…\"", format!("{:#20?}", vref));
+        assert_eq!("\"my secret is bananas\"", format!("{:#21?}", vref));
+    }
+
+    #[test]
+    fn check_simple_secret_display() {
+        let v = SimpleSecret::from_static("my secret is bananas");
+        let vref: &SimpleSecretRef = &v;
+
+        assert_eq!("[redacted SimpleSecret]", format!("{}", v));
+        assert_eq!("my secret is bananas", format!("{:#}", v));
+
+        assert_eq!("[redacted SimpleSecretRef]", format!("{}", vref));
+        assert_eq!("my secret is bananas", format!("{:#}", vref));
+    }
 }
